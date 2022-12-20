@@ -7,13 +7,20 @@ import win32com.client as win32
 emails = pd.read_excel(r'C:\Users\Fábio\OneDrive\Projeto Python Hash\Projeto AutomacaoIndicadores\Bases de Dados\Emails.xlsx')
 lojas = pd.read_csv(r'C:\Users\Fábio\OneDrive\Projeto Python Hash\Projeto AutomacaoIndicadores\Bases de Dados\Lojas.csv',encoding='latin1', sep=';')
 vendas = pd.read_excel(r'C:\Users\Fábio\OneDrive\Projeto Python Hash\Projeto AutomacaoIndicadores\Bases de Dados\Vendas.xlsx')
-# display(emails)
 display(lojas)
-# display(vendas)
+
+# Mesclando coluna 
+vendas = vendas.merge(lojas, on='ID Loja')
+display(vendas)
+
+dicionario_lojas = {}
+for loja in lojas['Loja']:
+    dicionario_lojas[loja] = vendas.loc[vendas['Loja']==loja, :]
+display(dicionario_lojas['Rio Mar Recife'])
 
 # Definir o dia do indicador
-
 dia_indicador = vendas['Data'].max()
+
 # Mostrando a data com o maior valor 
 print(dia_indicador)
 print(f'{dia_indicador.day}/{dia_indicador.month}')
@@ -49,9 +56,8 @@ for loja in dicionario_lojas:
 
     faturamento_ano = vendas_lojas['Valor Final'].sum()
     faturamento_dia = vendas_lojas_dia['Valor Final'].sum()
-    # print(f'R$ {faturamento_ano:,.2f}')
-    # print(f'{faturamento_dia}')
-    # print('R${:,.2f}'.format(faturamento_ano))
+    print(f'R$ {faturamento_ano:,.2f}')
+    print(f'{faturamento_dia}')
 
     # Calcular a diversidade de produtos
 
