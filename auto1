@@ -1,0 +1,179 @@
+import pandas as pd
+import pathlib
+import win32com.client as win32
+
+# Importar base de dados
+
+emails = pd.read_excel(r'C:\Users\Fábio\OneDrive\Projeto Python Hash\Projeto AutomacaoIndicadores\Bases de Dados\Emails.xlsx')
+lojas = pd.read_csv(r'C:\Users\Fábio\OneDrive\Projeto Python Hash\Projeto AutomacaoIndicadores\Bases de Dados\Lojas.csv',encoding='latin1', sep=';')
+vendas = pd.read_excel(r'C:\Users\Fábio\OneDrive\Projeto Python Hash\Projeto AutomacaoIndicadores\Bases de Dados\Vendas.xlsx')
+# display(emails)
+display(lojas)
+# display(vendas)
+
+# Definir o dia do indicador
+
+dia_indicador = vendas['Data'].max()
+# Mostrando a data com o maior valor 
+print(dia_indicador)
+print(f'{dia_indicador.day}/{dia_indicador.month}')
+
+# Salvar a planilha na pasta de backup M33A7
+
+caminho_backup = pathlib.Path(r'C:\Users\Fábio\OneDrive\Projeto Python Hash\Projeto AutomacaoIndicadores\Backup Arquivos Lojas')
+arquivos_pasta_backup = caminho_backup.iterdir() 
+lista_nomes_backup = [arquivo.name for arquivo in arquivos_pasta_backup]
+
+for loja in dicionario_lojas: # M33A8
+    if loja not in lista_nomes_backup: # Se a Loja não estiver na lista de nomes backup, vai ser criado as pastas
+        nova_pasta = caminho_backup / loja # O pathlib permite juntar caminhos só colocando a barra "/"
+        nova_pasta.mkdir() # mkdir() É pra criar novas pastas dentro do caminho que foi passado 
+    nome_arquivo = f'{dia_indicador.month}_{dia_indicador.day}_{loja}.xlsx'
+    local_arquivo = caminho_backup / loja / nome_arquivo
+    dicionario_lojas[loja].to_excel(local_arquivo)
+
+# Definição de metas
+
+meta_faturamento_dia = 1000
+meta_faturamento_ano = 1650000
+meta_qtdeprodutos_dia = 4
+meta_qtdeprodutos_ano = 120
+meta_ticketmedio_ano = 500
+meta_ticketmedio_dia = 500
+
+# Calcular o indicador pra 1 loja M33A9
+for loja in dicionario_lojas:
+
+    vendas_lojas = dicionario_lojas[loja]
+    vendas_lojas_dia = vendas_lojas.loc[vendas_lojas['Data']==dia_indicador, :]
+
+    faturamento_ano = vendas_lojas['Valor Final'].sum()
+    faturamento_dia = vendas_lojas_dia['Valor Final'].sum()
+    # print(f'R$ {faturamento_ano:,.2f}')
+    # print(f'{faturamento_dia}')
+    # print('R${:,.2f}'.format(faturamento_ano))
+
+    # Calcular a diversidade de produtos
+
+    qtde_produtos_ano = len(vendas_lojas['Produto'].unique()) # .unique() ele pega uma coluna e tira os valores duplicados
+    qtde_produtos_dia = len(vendas_lojas_dia['Produto'].unique())
+
+    # Calcular Ticket médio # O ticket é quanto o cara pagou pela venda total M33A12
+    valor_venda = vendas_lojas.groupby('Código Venda').sum()
+    ticket_medio_ano = valor_venda['Valor Final'].mean()
+
+    # Calcular Ticket médio do dia
+    
+    valor_venda_dia = vendas_lojas_dia.groupby('Código Venda').sum()
+    ticket_medio_dia = valor_venda_dia['Valor Final'].mean()
+    
+    # Enviar o e-mail    
+    outlook = win32.Dispatch('outlook.application')
+    
+    name = emails.loc[emails['Loja']==loja ,'Gerente'].values[0]
+    mail = outlook.CreateItem(0)
+    mail.To = emails.loc[emails['Loja']==loja ,'E-mail'].values[0]
+    mail.Subject = f'OnePage dia {dia_indicador.day}/{dia_indicador.month} - Loja {loja}'
+    # mail.Body = 'Texto do dia'
+    # print(loja)
+
+    if faturamento_dia >= meta_faturamento_dia:
+        cor_fat_dia = 'green'
+    else:
+        cor_fat_dia = 'red'
+    if faturamento_ano >= meta_faturamento_ano:
+        cor_fat_ano = 'green'
+    else:
+        cor_fat_ano = 'red'
+    if qtde_produtos_dia >= meta_qtdeprodutos_dia:
+        cor_qtde_dia = 'green'
+    else:
+        cor_qtde_dia = 'red'
+    if qtde_produtos_ano >= meta_qtdeprodutos_ano:
+        cor_qtde_ano = 'green'
+    else:
+        cor_qtde_ano = 'red'
+    if ticket_medio_dia >= meta_ticketmedio_dia:
+        cor_ticket_dia = 'green'
+    else:
+        cor_ticket_dia = 'red'
+    if ticket_medio_ano >= meta_ticketmedio_ano:   
+        cor_ticket_ano = 'green'
+    else:
+        cor_ticket_ano = 'red'
+
+    mail.HTMLBody = f'''   
+    <p>Bom dia, {name}</p>
+
+    <p> O resultado de ontem 
+    <strong>({dia_indicador.day}/{dia_indicador.month})</strong>da <strong>Loja {loja}</strong> foi: </p>
+
+    <table>
+     <tr>
+      <th>Indicador</th>
+      <th>Valor Dia</th>
+      <th>Meta Dia</th>
+      <th>Cenario Dia</th>
+      </tr>
+      <tr>
+        <td>Faturamento</td>
+        <td style="text-align: center">R${faturamento_dia:.2f}</td>
+        <td style="text-align: center">R${meta_faturamento_dia:.2f}</td>
+        <td style="text-align: center"><font color="{cor_fat_dia}">◙</font></td>
+      </tr>
+      <tr>
+        <td>Diversidade de produtos</td>
+        <td style="text-align: center">{qtde_produtos_dia}</td>
+        <td style="text-align: center">{meta_qtdeprodutos_dia}</td>
+        <td style="text-align: center"><font color="{cor_qtde_dia}">◙</font></td>
+      </tr>
+     <tr>
+        <td>Ticket Médio</td>
+        <td style="text-align: center">{ticket_medio_dia:.2f}</td>
+        <td style="text-align: center">{meta_ticketmedio_dia:.2f}</td>
+        <td style="text-align: center"><font color="{cor_ticket_dia}">◙</font></td>
+      </tr>
+    </table>
+    <br>
+    <table>
+     <tr>
+      <th>Indicador</th>
+      <th>Valor Ano</th>
+      <th>Meta Ano</th>
+      <th>Cenario Ano</th>
+      </tr>
+      <tr>
+        <td>Faturamento</td>
+        <td style="text-align: center">R${faturamento_ano:.2f}</td>
+        <td style="text-align: center">R${meta_faturamento_ano:.2f}</td>
+        <td style="text-align: center"><font color="{cor_fat_ano}">◙</font></td>
+      </tr>
+      <tr>
+        <td>Diversidade de produtos</td>
+        <td style="text-align: center">{qtde_produtos_ano}</td>
+        <td style="text-align: center">{meta_qtdeprodutos_ano}</td>
+        <td style="text-align: center"><font color="{cor_qtde_ano}">◙</font></td>
+      </tr>
+     <tr>
+        <td>Ticket Médio</td>
+        <td style="text-align: center">R${ticket_medio_ano:.2f}</td>
+        <td style="text-align: center">R${meta_ticketmedio_ano:.2f}</td>
+        <td style="text-align: center"><font color="{cor_ticket_ano}">◙</font></td>
+      </tr>
+    </table>
+
+    <p> Segue em anexo a planilha com todos os dados para mais detalhes. </p>
+
+    <p> Qualquer dúvida estou a disposição</p>
+
+    <p>Att, Fábio</p>
+
+    '''
+
+    # Anexos
+    att = pathlib.Path.cwd() / caminho_backup / loja / f'{dia_indicador.month}_{dia_indicador.day}_{loja}.xlsx'
+    mail.Attachments.Add(str(att))
+    mail.Send()
+
+    print(f'E-mail da Loja {loja} enviado')
+    
